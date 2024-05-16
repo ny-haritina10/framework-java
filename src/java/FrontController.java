@@ -61,7 +61,7 @@ public class FrontController extends HttpServlet {
             out.println("<h3> URL: " + url + " </h3>");
 
             for (Class<?> controller : this.controllers) {
-                out.println("Found controller: " + this.controller.getName() + "<br>");
+                out.println("Found controller: " + controller.getName() + "<br>");
             }
         } 
         
