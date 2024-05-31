@@ -38,4 +38,22 @@ public class Utils {
             out.println("<br>");
         }
     }
+
+    public static void handleModelView(Object result, PrintWriter out, HttpServletRequest request, HttpServletResponse response) 
+        throws Exception
+    {
+        try {
+            if (result instanceof ModelView) {
+                ModelView modelView = (ModelView) result;
+                ModelView.dispatch(modelView, request, response);
+            } 
+            
+            else 
+            { out.println("Method result: <h2>" + result + "</h2>"); }   
+        } 
+        
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

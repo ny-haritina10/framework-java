@@ -55,12 +55,13 @@ public class FrontController extends HttpServlet {
             // invoke methods by reflection
             Object result = Mapping.reflectMethod(mapping);    
             
-            out.println("Method result: <h2>" + result + "</h2>");
+
+            // handle model view 
+            Utils.handleModelView(result, out, request, response);
         } 
-        
-        catch (Exception e) {
-            e.printStackTrace();
-        }
+
+        catch (Exception e)
+        { e.printStackTrace(); }
     }
 
     @Override
