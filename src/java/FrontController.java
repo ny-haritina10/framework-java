@@ -33,7 +33,35 @@ public class FrontController extends HttpServlet {
         
         catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException 
+    {
+        try {
+            PrintWriter out = response.getWriter();
+            String url = request.getRequestURI();
+
+            // parse requested URL
+            String requestedURL = Utils.parseURL("test", url);
+
+            // Print all controllers
+            Utils.printControllers(out, this.controllers);
+
+            // handle requested URL
+            Mapping mapping = this.map.get(requestedURL);
+            Utils.handleRequestedURL(mapping, out, requestedURL);
+
+            // invoke methods by reflection
+            Object result = Mapping.reflectMethod(mapping);    
+            
+            // handle model view 
+            Utils.handleModelView(result, out, request, response);
         } 
+
+        catch (Exception e)
+        { e.printStackTrace(); }
     }
 
     @Override
