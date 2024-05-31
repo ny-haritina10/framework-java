@@ -74,7 +74,6 @@ public class ControllerScanner {
                         String methodName = method.getName();
                         String url = method.getAnnotation(AnnotationGetMapping.class).url();
     
-    
                         Mapping mapping = new Mapping(className, methodName);
                         hash.put(url, mapping);
                     }
@@ -85,6 +84,5 @@ public class ControllerScanner {
         catch (Exception e) {
             e.printStackTrace();
         }
-        
     }
 }

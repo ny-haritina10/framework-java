@@ -1,5 +1,8 @@
 package utils;
 
+import java.io.*;
+import java.lang.reflect.*;
+
 public class Mapping {
     String className;
     String methodName;
@@ -9,6 +12,26 @@ public class Mapping {
     {
         this.setClassName(className);
         this.setMethodName(methodName);
+    }
+
+    public static Object reflectMethod(Mapping mapping) 
+        throws Exception
+    {
+        try {
+            Class<?> controllerClass = Class.forName(mapping.getClassName());
+            Object controllerInstance = controllerClass.newInstance();
+
+            Method method = controllerClass.getDeclaredMethod(mapping.getMethodName(), null);
+            method.setAccessible(true);
+
+            Object result = method.invoke(controllerInstance, null);
+            return result;    
+        } 
+        
+        catch (Exception e) 
+        { e.printStackTrace(); }
+
+        return null;
     }
 
     public void setClassName(String className) 
