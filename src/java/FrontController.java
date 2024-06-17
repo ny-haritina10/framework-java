@@ -27,26 +27,28 @@ public class FrontController extends HttpServlet {
             this.scanner = new ControllerScanner();
             this.controllerPackage = context.getInitParameter("base_package");
 
-            if (this.controllerPackage == null || this.controllerPackage.isEmpty()) {
-                throw new BuildException("The 'base_package' parameters is empty or undifined in web.xml");
-            }
+            // undefined/empty base_package exception
+            if (this.controllerPackage == null || this.controllerPackage.isEmpty()) 
+            { throw new BuildException("The 'base_package' parameters is empty or undifined in web.xml"); }
 
             this.controllers = scanner.findClasses(controllerPackage, AnnotationController.class);
-            if (this.controllers.isEmpty()) {
-                throw new BuildException("The folder specified by 'base_package' doesn't exist");
-            }
 
+            // not existing base_package
+            if (this.controllers.isEmpty()) 
+            { throw new BuildException("The folder specified by 'base_package' doesn't exist"); }
+
+            // mapping and scanning
             this.scanner.map(this.map, this.controllers, AnnotationGetMapping.class);
+            this.scanner.map(this.map, this.controllers, AnnotationPostMapping.class);
         } 
         
         catch (BuildException | RequestException e) {
             System.err.println(e.getMessage());
-            throw new ServletException(e);  // Rethrow as ServletException to stop the servlet initialization
+            throw new ServletException(e);          // rethrow as ServletException to stop the servlet initialization
         }
         
-        catch (Exception e) {
-            e.printStackTrace();
-        }
+        catch (Exception e) 
+        { e.printStackTrace(); }
     }
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -66,15 +68,12 @@ public class FrontController extends HttpServlet {
             Mapping mapping = this.map.get(requestedURL);
 
             // handle 404 error  
-            if (mapping == null) {
-                throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL);
-            }
-
-            Utils.handleRequestedURL(mapping, out, requestedURL);
+            if (mapping == null) 
+            { throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL); }
 
             // invoke methods by reflection
-            Object result = Mapping.reflectMethod(mapping);    
-            
+            Object result = Mapping.reflectMethod(mapping, request); // Pass request to extract parameters
+
             // handle model view 
             Utils.handleModelView(result, out, request, response);
         } 
@@ -86,7 +85,7 @@ public class FrontController extends HttpServlet {
             out.println("<html><body><h3>Erreur : " + e.getMessage() + "</h3></body></html>");
             out.close();
         }
-        
+
         catch (Exception e) {
             e.printStackTrace();
         }

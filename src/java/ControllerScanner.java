@@ -12,10 +12,11 @@ import java.util.List;
 
 import exceptions.RequestException;
 import exceptions.BuildException;
+import utils.*;
 
 public class ControllerScanner {
 
-    public List<Class<?>> findClasses(String packageName, Class<?> classAnnotation) 
+    public List<Class<?>> findClasses(String packageName, Class<? extends Annotation> classAnnotation) 
         throws ClassNotFoundException, IOException, BuildException 
     {
         List<Class<?>> controllers = new ArrayList<>();
@@ -43,7 +44,7 @@ public class ControllerScanner {
         return controllers;
     }
 
-    private List<Class<?>> findClasses(File directory, String packageName, Class<?> classAnnotation) 
+    private List<Class<?>> findClasses(File directory, String packageName, Class<? extends Annotation> classAnnotation) 
         throws ClassNotFoundException 
     {
         List<Class<?>> classes = new ArrayList<>();
@@ -59,7 +60,7 @@ public class ControllerScanner {
             } 
             else if (file.getName().endsWith(".class")) {
                 Class<?> clazz = Class.forName(packageName + '.' + file.getName().substring(0, file.getName().length() - 6));
-                if (clazz.isAnnotationPresent((Class<? extends Annotation>) classAnnotation)) {
+                if (clazz.isAnnotationPresent(classAnnotation)) {
                     classes.add(clazz);
                 }
             }
@@ -68,39 +69,46 @@ public class ControllerScanner {
         return classes;
     }
 
-    public void map(HashMap<String, Mapping> hash, List<Class<?>> controllers, Class<?> classAnnotation) throws RequestException {
+    public void map(HashMap<String, Mapping> hash, List<Class<?>> controllers, Class<? extends Annotation>... annotations) throws RequestException {
         try {
             for (Class<?> controller : controllers) {
                 Method[] methods = controller.getDeclaredMethods();
 
                 for (Method method : methods) {
-                    if (method.isAnnotationPresent(AnnotationGetMapping.class)) {
-                        String className = controller.getName();
-                        String methodName = method.getName();
-                        String url = method.getAnnotation(AnnotationGetMapping.class).url();
+                    for (Class<? extends Annotation> annotation : annotations) {
+                        if (method.isAnnotationPresent(annotation)) {
+                            String className = controller.getName();
+                            String methodName = method.getName();
+                            String url = null;
+                            if (annotation.equals(AnnotationGetMapping.class)) 
+                            { url = method.getAnnotation(AnnotationGetMapping.class).url(); } 
+                            
+                            else if (annotation.equals(AnnotationPostMapping.class)) 
+                            { url = method.getAnnotation(AnnotationPostMapping.class).url(); }
 
-                        // Vérifier le type de retour de la méthode
-                        Class<?> returnType = method.getReturnType();
-                        if (!(returnType.equals(String.class) || returnType.equals(ModelView.class))) {
-                            throw new RequestException("The method " + methodName + " in " + className + 
-                                                       " has returned an invalid type. Returned type : " + returnType.getName());
+                            Class<?> returnType = method.getReturnType();
+                            if (!(returnType.equals(String.class) || returnType.equals(ModelView.class))) {
+                                throw new RequestException("The method " + methodName + " in " + className + 
+                                                           " has returned an invalid type. Returned type : " + returnType.getName());
+                            }
+
+                            if (hash.containsKey(url)) 
+                            { throw new RequestException("URL duplicated : " + url); }
+
+                            Mapping mapping = new Mapping(className, methodName);
+                            hash.put(url, mapping);
                         }
-
-                        if (hash.containsKey(url)) {
-                            throw new RequestException("URL duplicated : " + url);
-                        }
-
-                        Mapping mapping = new Mapping(className, methodName);
-                        hash.put(url, mapping);
                     }
                 }
             }
-        } catch (Exception e) {
+        } 
+        
+        catch (Exception e) {
             e.printStackTrace();
-            if (e instanceof RequestException) {
-                throw (RequestException) e;
-            }
+            if (e instanceof RequestException) 
+            { throw (RequestException) e; }
+            
             throw new RuntimeException("Controller mapping error", e);
         }
-    }
+    }    
 }
