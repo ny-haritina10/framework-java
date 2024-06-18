@@ -1,33 +1,32 @@
 package utils;
 
-import java.io.*;
 import java.lang.reflect.*;
-import java.sql.Date;
-
-import javax.servlet.*;
-import javax.servlet.http.*;
+import java.util.*;
+import javax.servlet.http.HttpServletRequest;
 
 public class Mapping {
-    String className;
-    String methodName;
-    
-    public Mapping(String className, String methodName) 
-        throws Exception
-    {
-        this.setClassName(className);
-        this.setMethodName(methodName);
+    private String className;
+    private String methodName;
+
+    public Mapping(String className, String methodName) {
+        this.className = className;
+        this.methodName = methodName;
     }
 
-    public static Object reflectMethod(Mapping mapping, HttpServletRequest request) 
-        throws Exception 
-    {
+    public String getClassName() {
+        return className;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public static Object reflectMethod(Mapping mapping, HttpServletRequest request) throws Exception {
         try {
             Class<?> controllerClass = Class.forName(mapping.getClassName());
-            Object controllerInstance = controllerClass.newInstance();
-            
-            Method method = null;
+            Object controllerInstance = controllerClass.getDeclaredConstructor().newInstance();
 
-            // find the mapped method in `mapping`
+            Method method = null;
             for (Method m : controllerClass.getDeclaredMethods()) {
                 if (m.getName().equals(mapping.getMethodName())) {
                     method = m;
@@ -35,35 +34,42 @@ public class Mapping {
                 }
             }
 
-            // inexistant method
-            if (method == null) 
-            { throw new NoSuchMethodException("Method " + mapping.getMethodName() + " not found in class " + mapping.getClassName()); }
+            if (method == null) {
+                throw new NoSuchMethodException("Method " + mapping.getMethodName() + " not found in class " + mapping.getClassName());
+            }
 
-            Parameter[] parameters = method.getParameters();        // retrieve method parameters
-            Object[] args = new Object[parameters.length];          
-
+            Parameter[] parameters = method.getParameters();
+            Object[] args = new Object[parameters.length];
 
             for (int i = 0; i < parameters.length; i++) {
                 Parameter parameter = parameters[i];
 
-                // check if param is annoted with `AnnotationRequestParam`
                 if (parameter.isAnnotationPresent(AnnotationRequestParam.class)) {
-
                     AnnotationRequestParam requestParam = parameter.getAnnotation(AnnotationRequestParam.class);
 
-                    String paramName = requestParam.name();     // param name
-                    String paramValue = request.getParameter(paramName);        // retrieve param value by request.getParameter()
+                    String paramName = requestParam.name();
+                    String paramValue = request.getParameter(paramName);
 
                     args[i] = convertParameterType(paramValue, parameter.getType());
+                } 
+                
+                else if (parameter.isAnnotationPresent(AnnotationModelAttribute.class)) {
+                    AnnotationModelAttribute modelAttribute = parameter.getAnnotation(AnnotationModelAttribute.class);
+                    String attributeName = modelAttribute.value();
+
+                    Class<?> paramType = parameter.getType();
+                    Object model = paramType.getDeclaredConstructor().newInstance();
+
+                    setAllModelAttribute(model, request);
+                    args[i] = model;
                 }
             }
 
             method.setAccessible(true);
             return method.invoke(controllerInstance, args);
-        }
-
-        catch (Exception e) 
-        {
+        } 
+        
+        catch (Exception e) {
             e.printStackTrace();
             throw e;
         }
@@ -72,40 +78,33 @@ public class Mapping {
     private static Object convertParameterType(String value, Class<?> type) {
         if (type == String.class) 
         { return value; } 
-        
+
         else if (type == int.class || type == Integer.class) 
-        { return Integer.parseInt(value); }
+        { return Integer.parseInt(value); } 
 
         else if (type == double.class || type == Double.class) 
-        { return Double.parseDouble(value); }
+        { return Double.parseDouble(value); } 
 
-        else if (type == Date.class)    // java.sql.Date
-        { return Date.valueOf(value); }
+        else if (type == java.sql.Date.class) 
+        { return java.sql.Date.valueOf(value); }
 
         return null;
     }
 
-    public void setClassName(String className) 
-        throws Exception
+    private static void setAllModelAttribute(Object model, HttpServletRequest request) 
+        throws IllegalAccessException 
     {
-        if (className == null || className.length() == 0 || className.equals(" ")) 
-        { throw new Exception("Invalid class name"); }
+        Class<?> modelClass = model.getClass();
+        Field[] fields = modelClass.getDeclaredFields();
 
-        this.className = className;
+        for (Field field : fields) {
+            String paramName = field.getName();
+            String paramValue = request.getParameter(paramName);
+
+            if (paramValue != null) {
+                field.setAccessible(true);
+                field.set(model, convertParameterType(paramValue, field.getType()));
+            }
+        }
     }
-
-    public void setMethodName(String methodName) 
-        throws Exception
-    {
-        if (methodName == null || methodName.length() == 0 || methodName.equals(" ")) 
-        { throw new Exception("Invalid method name"); }
-
-        this.methodName = methodName;
-    }
-
-    public String getClassName()
-    { return this.className; }
-
-    public String getMethodName() 
-    { return this.methodName; }
 }
