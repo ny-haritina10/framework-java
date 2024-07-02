@@ -14,6 +14,7 @@ import exceptions.*;
 public class FrontController extends HttpServlet {
 
     private String controllerPackage;
+    private String projectName;
     private ControllerScanner scanner;
     private List<Class<?>> controllers;
     private HashMap<String, Mapping> map = new HashMap<String, Mapping>();
@@ -26,6 +27,7 @@ public class FrontController extends HttpServlet {
 
             this.scanner = new ControllerScanner();
             this.controllerPackage = context.getInitParameter("base_package");
+            this.projectName = context.getInitParameter("project_name");
 
             // undefined/empty base_package exception
             if (this.controllerPackage == null || this.controllerPackage.isEmpty()) 
@@ -58,8 +60,9 @@ public class FrontController extends HttpServlet {
             PrintWriter out = response.getWriter();
             String url = request.getRequestURI();
 
+
             // parse requested URL
-            String requestedURL = Utils.parseURL("test", url);
+            String requestedURL = Utils.parseURL(this.projectName, url);
 
             // Print all controllers
             Utils.printControllers(out, this.controllers);
@@ -86,8 +89,28 @@ public class FrontController extends HttpServlet {
             out.close();
         }
 
+        catch (NumberFormatException e) {
+            response.setContentType("text/html");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);  // Statut 400
+            PrintWriter out = response.getWriter();
+            out.println("<html><body><h3>Erreur de format de nombre : " + e.getMessage() + "</h3></body></html>");
+            out.close();
+        }
+
+        catch (IllegalArgumentException e) {
+            response.setContentType("text/html");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);  // Statut 400
+            PrintWriter out = response.getWriter();
+            out.println("<html><body><h3>Erreur d'argument illégal : " + e.getMessage() + "</h3></body></html>");
+            out.close();
+        }
+
         catch (Exception e) {
-            e.printStackTrace();
+            response.setContentType("text/html");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);  // Statut 500
+            PrintWriter out = response.getWriter();
+            out.println("<html><body><h3>Erreur interne du serveur : " + e.getMessage() + "</h3></body></html>");
+            out.close();
         }
     }
 

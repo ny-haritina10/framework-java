@@ -47,6 +47,14 @@ Framework-Java est un framework MVC développé en Java à partir de zéro. Il p
     ```
 2. Déployez votre application sur un serveur compatible avec les servlets.
 3. Accédez à votre application via le navigateur en utilisant l'URL appropriée.
+4. Utilisation de Session
+    ### Méthode 1 : Ajout de la classe session en tant qu'attribut du Controller
+    - Ajouter un attribut de type `Session` dans le votre Controller
+    - Utiliser la Session avec les méthodes `add`, `get`, `delete`  
+
+    ### Méthode 2 : Ajout de la classe session en tant qu'argument de la méthode du Controller
+    - Ajouter un argument de type Session dans la fonction du Controller 
+    - Utiliser la Session avec les méthodes `add`, `get`, `delete`  
 
 ## Licence
 
