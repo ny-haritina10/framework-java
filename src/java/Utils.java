@@ -8,6 +8,10 @@ import java.util.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+import exceptions.*;
+
+import com.google.gson.Gson;
+
 public class Utils {
 
     public static String parseURL(String projectName, String url) {
@@ -54,6 +58,26 @@ public class Utils {
         
         catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public static void handleRestAPI(Object result, HttpServletResponse response) 
+        throws Exception 
+    {
+        response.setContentType("application/json");
+        PrintWriter out = response.getWriter();
+        Gson gson = new Gson();
+
+        if (result instanceof ModelView) {
+            ModelView modelView = (ModelView) result;
+            String json = gson.toJson(modelView.getData());
+
+            out.print(json);
+        } 
+        
+        else {
+            String json = gson.toJson(result);
+            out.print(json);
         }
     }
 }
