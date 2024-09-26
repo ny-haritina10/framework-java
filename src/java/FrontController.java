@@ -8,6 +8,8 @@ import java.util.List;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+import com.google.gson.Gson;
+
 import utils.*;
 import exceptions.*;
 
@@ -60,58 +62,47 @@ public class FrontController extends HttpServlet {
             PrintWriter out = response.getWriter();
             String url = request.getRequestURI();
 
-
-            // parse requested URL
             String requestedURL = Utils.parseURL(this.projectName, url);
-
-            // Print all controllers
-            Utils.printControllers(out, this.controllers);
-
-            // handle requested URL
             Mapping mapping = this.map.get(requestedURL);
 
-            // handle 404 error  
-            if (mapping == null) 
-            { throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL); }
+            if (mapping == null) {
+                throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL);
+            }
 
-            // invoke methods by reflection
-            Object result = Mapping.reflectMethod(mapping, request); // Pass request to extract parameters
+            // Invoke methods by reflection
+            Object result = Mapping.reflectMethod(mapping, request);
 
-            // handle model view 
-            Utils.handleModelView(result, out, request, response);
+            // Check if the method has AnnotationRestAPI
+            Method method = Class.forName(mapping.getClassName()).getDeclaredMethod(mapping.getMethodName());
+            if (method.isAnnotationPresent(AnnotationRestAPI.class)) 
+            { Utils.handleRestAPI(result, response); } 
+            
+            else 
+            { Utils.handleModelView(result, out, request, response); }
         } 
 
-        catch (RequestException e) {
-            response.setContentType("text/html");
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);  // Statut 404
-            PrintWriter out = response.getWriter();
-            out.println("<html><body><h3>Erreur : " + e.getMessage() + "</h3></body></html>");
-            out.close();
-        }
+        catch (Exception e) 
+        { handleException(e, response); }
+    }
+   
+    private void handleException(Exception e, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json");
+        PrintWriter out = response.getWriter();
+        Gson gson = new Gson();
 
-        catch (NumberFormatException e) {
-            response.setContentType("text/html");
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);  // Statut 400
-            PrintWriter out = response.getWriter();
-            out.println("<html><body><h3>Erreur de format de nombre : " + e.getMessage() + "</h3></body></html>");
-            out.close();
-        }
+        HashMap<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", e.getMessage());
 
-        catch (IllegalArgumentException e) {
-            response.setContentType("text/html");
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);  // Statut 400
-            PrintWriter out = response.getWriter();
-            out.println("<html><body><h3>Erreur d'argument illégal : " + e.getMessage() + "</h3></body></html>");
-            out.close();
-        }
+        if (e instanceof RequestException) 
+        { response.setStatus(HttpServletResponse.SC_NOT_FOUND); } 
+        
+        else if (e instanceof NumberFormatException || e instanceof IllegalArgumentException) 
+        { response.setStatus(HttpServletResponse.SC_BAD_REQUEST); } 
+        
+        else 
+        { response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); }
 
-        catch (Exception e) {
-            response.setContentType("text/html");
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);  // Statut 500
-            PrintWriter out = response.getWriter();
-            out.println("<html><body><h3>Erreur interne du serveur : " + e.getMessage() + "</h3></body></html>");
-            out.close();
-        }
+        out.print(gson.toJson(errorResponse));
     }
 
     @Override

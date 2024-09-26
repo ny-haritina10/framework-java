@@ -69,7 +69,9 @@ public class ControllerScanner {
         return classes;
     }
 
-    public void map(HashMap<String, Mapping> hash, List<Class<?>> controllers, Class<? extends Annotation>... annotations) throws RequestException {
+    public void map(HashMap<String, Mapping> hash, List<Class<?>> controllers, Class<? extends Annotation>... annotations) 
+        throws RequestException 
+    {
         try {
             for (Class<?> controller : controllers) {
                 Method[] methods = controller.getDeclaredMethods();
@@ -80,6 +82,7 @@ public class ControllerScanner {
                             String className = controller.getName();
                             String methodName = method.getName();
                             String url = null;
+                            
                             if (annotation.equals(AnnotationGetMapping.class)) 
                             { url = method.getAnnotation(AnnotationGetMapping.class).url(); } 
                             
@@ -87,7 +90,7 @@ public class ControllerScanner {
                             { url = method.getAnnotation(AnnotationPostMapping.class).url(); }
 
                             Class<?> returnType = method.getReturnType();
-                            if (!(returnType.equals(String.class) || returnType.equals(ModelView.class))) {
+                            if (!(returnType.equals(String.class) || returnType.equals(ModelView.class)) && !method.isAnnotationPresent(AnnotationRestAPI.class)) {
                                 throw new RequestException("The method " + methodName + " in " + className + 
                                                            " has returned an invalid type. Returned type : " + returnType.getName());
                             }
@@ -107,8 +110,8 @@ public class ControllerScanner {
             e.printStackTrace();
             if (e instanceof RequestException) 
             { throw (RequestException) e; }
-            
+
             throw new RuntimeException("Controller mapping error", e);
         }
-    }    
+    }        
 }
