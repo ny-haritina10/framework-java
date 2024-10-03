@@ -42,8 +42,7 @@ public class FrontController extends HttpServlet {
             { throw new BuildException("The folder specified by 'base_package' doesn't exist"); }
 
             // mapping and scanning
-            this.scanner.map(this.map, this.controllers, AnnotationGetMapping.class);
-            this.scanner.map(this.map, this.controllers, AnnotationPostMapping.class);
+            this.scanner.map(this.map, this.controllers);
         } 
         
         catch (BuildException | RequestException e) {
@@ -61,13 +60,20 @@ public class FrontController extends HttpServlet {
         try {
             PrintWriter out = response.getWriter();
             String url = request.getRequestURI();
+            String methodRequest = request.getMethod();
 
             String requestedURL = Utils.parseURL(this.projectName, url);
-            Mapping mapping = this.map.get(requestedURL);
+            
+            Mapping mapping = findMappingByUrl(requestedURL);
 
-            if (mapping == null) {
-                throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL);
-            }
+            if (mapping == null) 
+            { throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL); }
+
+            if (!mapping.getVerb().equals(methodRequest)) 
+            { throw new RequestException("405 METHOD NOT ALLOWED: " + methodRequest + " method not allowed for this URL"); }
+
+            String key = methodRequest + ":" + requestedURL;
+            mapping = this.map.get(key);
 
             // Invoke methods by reflection
             Object result = Mapping.reflectMethod(mapping, request);
@@ -83,6 +89,15 @@ public class FrontController extends HttpServlet {
 
         catch (Exception e) 
         { handleException(e, response); }
+    }
+
+    private Mapping findMappingByUrl(String url) {
+        for (String key : map.keySet()) {
+            if (key.endsWith(":" + url)) {
+                return map.get(key);
+            }
+        }
+        return null;
     }
    
     private void handleException(Exception e, HttpServletResponse response) throws IOException {

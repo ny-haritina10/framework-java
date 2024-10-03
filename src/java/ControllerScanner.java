@@ -68,8 +68,8 @@ public class ControllerScanner {
 
         return classes;
     }
-
-    public void map(HashMap<String, Mapping> hash, List<Class<?>> controllers, Class<? extends Annotation>... annotations) 
+    
+    public void map(HashMap<String, Mapping> hash, List<Class<?>> controllers) 
         throws RequestException 
     {
         try {
@@ -77,35 +77,43 @@ public class ControllerScanner {
                 Method[] methods = controller.getDeclaredMethods();
 
                 for (Method method : methods) {
-                    for (Class<? extends Annotation> annotation : annotations) {
-                        if (method.isAnnotationPresent(annotation)) {
-                            String className = controller.getName();
-                            String methodName = method.getName();
-                            String url = null;
-                            
-                            if (annotation.equals(AnnotationGetMapping.class)) 
-                            { url = method.getAnnotation(AnnotationGetMapping.class).url(); } 
-                            
-                            else if (annotation.equals(AnnotationPostMapping.class)) 
-                            { url = method.getAnnotation(AnnotationPostMapping.class).url(); }
+                    AnnotationURL urlAnnotation = method.getAnnotation(AnnotationURL.class);
+                    if (urlAnnotation != null) {
+                        String className = controller.getName();
+                        String methodName = method.getName();
+                        String url = urlAnnotation.value();
+                        String verb;
 
-                            Class<?> returnType = method.getReturnType();
-                            if (!(returnType.equals(String.class) || returnType.equals(ModelView.class)) && !method.isAnnotationPresent(AnnotationRestAPI.class)) {
-                                throw new RequestException("The method " + methodName + " in " + className + 
-                                                           " has returned an invalid type. Returned type : " + returnType.getName());
-                            }
-
-                            if (hash.containsKey(url)) 
-                            { throw new RequestException("URL duplicated : " + url); }
-
-                            Mapping mapping = new Mapping(className, methodName);
-                            hash.put(url, mapping);
+                        if (method.isAnnotationPresent(AnnotationPostMapping.class)) {
+                            verb = "POST";
+                        } 
+                        
+                        else if (method.isAnnotationPresent(AnnotationGetMapping.class)) {
+                            verb = "GET";
+                        } 
+                        
+                        else {
+                            // Skip methods that don't have either GET or POST annotation
+                            continue;
                         }
+
+                        Class<?> returnType = method.getReturnType();
+                        if (!(returnType.equals(String.class) || returnType.equals(ModelView.class)) && !method.isAnnotationPresent(AnnotationRestAPI.class)) {
+                            throw new RequestException("The method " + methodName + " in " + className + 
+                                                        " has returned an invalid type. Returned type : " + returnType.getName());
+                        }
+
+                        String key = verb + ":" + url;
+                        if (hash.containsKey(key)) 
+                        { throw new RequestException("URL duplicated for " + verb + " method: " + url); }
+
+                        Mapping mapping = new Mapping(className, methodName, verb);
+                        hash.put(key, mapping);
                     }
                 }
             }
         } 
-        
+
         catch (Exception e) {
             e.printStackTrace();
             if (e instanceof RequestException) 
