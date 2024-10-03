@@ -8,12 +8,15 @@ import exceptions.*;
 import session.Session;
 
 public class Mapping {
+    
     private String className;
     private String methodName;
+    private String verb;
 
-    public Mapping(String className, String methodName) {
+    public Mapping(String className, String methodName, String verb) {
         this.className = className;
         this.methodName = methodName;
+        this.verb = verb;
     }
 
     public static Object reflectMethod(Mapping mapping, HttpServletRequest request) 
@@ -139,4 +142,7 @@ public class Mapping {
 
     public String getMethodName() 
     { return methodName; }
+
+    public String getVerb()
+    { return verb; }
 }
