@@ -6,20 +6,19 @@ import javax.servlet.http.HttpServletRequest;
 
 import exceptions.*;
 import session.Session;
+import verb.VerbAction;
 
 public class Mapping {
     
     private String className;
-    private String methodName;
-    private String verb;
+    private List<VerbAction> verbActions;
 
-    public Mapping(String className, String methodName, String verb) {
+    public Mapping(String className, List<VerbAction> verbActions) {
         this.className = className;
-        this.methodName = methodName;
-        this.verb = verb;
+        this.verbActions = verbActions;
     }
 
-    public static Object reflectMethod(Mapping mapping, HttpServletRequest request) 
+    public static Object reflectMethod(Mapping mapping, HttpServletRequest request, String verb) 
         throws Exception 
     {
         try {
@@ -28,7 +27,7 @@ public class Mapping {
 
             Method method = null;
 
-            // init controler attributs
+            // init controller attributes
             Field[] fields = controllerClass.getDeclaredFields();
 
             for (Field field : fields) {
@@ -38,15 +37,21 @@ public class Mapping {
                 }
             }
             
-            for (Method m : controllerClass.getDeclaredMethods()) {
-                if (m.getName().equals(mapping.getMethodName())) {
-                    method = m;
+            // find method based on the verbs
+            for (VerbAction action : mapping.getVerbActions()) {
+                if (action.getVerb().equalsIgnoreCase(verb)) {
+                    for (Method m : controllerClass.getDeclaredMethods()) {
+                        if (m.getName().equals(action.getMethod())) {
+                            method = m;
+                            break;
+                        }
+                    }
                     break;
                 }
             }
 
             if (method == null) 
-            { throw new NoSuchMethodException("Method " + mapping.getMethodName() + " not found in class " + mapping.getClassName()); }
+            { throw new NoSuchMethodException("No method found for the verb: " + verb); }
 
             Parameter[] parameters = method.getParameters();
             Object[] args = new Object[parameters.length];
@@ -54,7 +59,7 @@ public class Mapping {
             for (int i = 0; i < parameters.length; i++) {
                 Parameter parameter = parameters[i];
 
-                // handle session as an argument
+                // Handle session as an argument
                 if (parameter.getType().equals(Session.class)) 
                 { args[i] = new session.Session(request); }
 
@@ -137,12 +142,18 @@ public class Mapping {
         { throw e; }
     }
 
+    public static Mapping findMappingByUrl(String url, HashMap<String, Mapping> map) {
+        for (String key : map.keySet()) {
+            if (key.endsWith(":" + url)) 
+            { return map.get(key); }
+        }
+
+        return null;
+    }
+
     public String getClassName() 
     { return className; }
 
-    public String getMethodName() 
-    { return methodName; }
-
-    public String getVerb()
-    { return verb; }
+    public List<VerbAction> getVerbActions() 
+    { return verbActions; }
 }
