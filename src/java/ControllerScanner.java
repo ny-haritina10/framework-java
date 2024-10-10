@@ -12,7 +12,7 @@ import java.util.List;
 
 import exceptions.RequestException;
 import exceptions.BuildException;
-import utils.*;
+import verb.VerbAction;
 
 public class ControllerScanner {
 
@@ -38,7 +38,7 @@ public class ControllerScanner {
         }
 
         if (controllers.isEmpty()) {
-            throw new BuildException("No controller found in the specified package : " + packageName);
+            throw new BuildException("No controller found in the specified package: " + packageName);
         }
 
         return controllers;
@@ -54,21 +54,21 @@ public class ControllerScanner {
 
         File[] files = directory.listFiles();
         assert files != null;
+
         for (File file : files) {
-            if (file.isDirectory()) {
-                classes.addAll(findClasses(file, packageName + "." + file.getName(), classAnnotation));
-            } 
+            if (file.isDirectory()) 
+            { classes.addAll(findClasses(file, packageName + "." + file.getName(), classAnnotation)); } 
+
             else if (file.getName().endsWith(".class")) {
                 Class<?> clazz = Class.forName(packageName + '.' + file.getName().substring(0, file.getName().length() - 6));
-                if (clazz.isAnnotationPresent(classAnnotation)) {
-                    classes.add(clazz);
-                }
+                if (clazz.isAnnotationPresent(classAnnotation)) 
+                { classes.add(clazz); }
             }
         }
 
         return classes;
     }
-    
+
     public void map(HashMap<String, Mapping> hash, List<Class<?>> controllers) 
         throws RequestException 
     {
@@ -80,45 +80,52 @@ public class ControllerScanner {
                     AnnotationURL urlAnnotation = method.getAnnotation(AnnotationURL.class);
                     if (urlAnnotation != null) {
                         String className = controller.getName();
-                        String methodName = method.getName();
                         String url = urlAnnotation.value();
-                        String verb;
+                        List<VerbAction> verbActions = new ArrayList<>();
 
-                        if (method.isAnnotationPresent(AnnotationPostMapping.class)) {
-                            verb = "POST";
-                        } 
-                        
-                        else if (method.isAnnotationPresent(AnnotationGetMapping.class)) {
-                            verb = "GET";
-                        } 
-                        
-                        else {
-                            // Skip methods that don't have either GET or POST annotation
-                            continue;
-                        }
+                        // handle http verbs by checking annotations
+                        if (method.isAnnotationPresent(AnnotationPostMapping.class)) 
+                        { verbActions.add(new VerbAction("POST", method.getName())); }
+
+                        if (method.isAnnotationPresent(AnnotationGetMapping.class)) 
+                        { verbActions.add(new VerbAction("GET", method.getName())); }
+
+                        // default GET 
+                        if (verbActions.isEmpty()) 
+                        { verbActions.add(new VerbAction("GET", method.getName())); }
 
                         Class<?> returnType = method.getReturnType();
-                        if (!(returnType.equals(String.class) || returnType.equals(ModelView.class)) && !method.isAnnotationPresent(AnnotationRestAPI.class)) {
-                            throw new RequestException("The method " + methodName + " in " + className + 
-                                                        " has returned an invalid type. Returned type : " + returnType.getName());
+                        if (
+                            !(returnType.equals(String.class) || 
+                            returnType.equals(ModelView.class)) && 
+                            !method.isAnnotationPresent(AnnotationRestAPI.class)) 
+                        {
+                            throw new RequestException(
+                                "The method " + method.getName() + " in " + className + 
+                                " has returned an invalid type. Returned type: " + returnType.getName());
                         }
 
-                        String key = verb + ":" + url;
-                        if (hash.containsKey(key)) 
-                        { throw new RequestException("URL duplicated for " + verb + " method: " + url); }
+                        // check if a Mapping already exists for this url
+                        Mapping existingMapping = hash.get(url);
 
-                        Mapping mapping = new Mapping(className, methodName, verb);
-                        hash.put(key, mapping);
+                        // add new verb actions to the existing mapping
+                        if (existingMapping != null) 
+                        { existingMapping.getVerbActions().addAll(verbActions); } 
+                        
+                        else {
+                            Mapping mapping = new Mapping(className, verbActions);
+                            hash.put(url, mapping);
+                        }
                     }
                 }
             }
         } 
-
+        
         catch (Exception e) {
             e.printStackTrace();
             if (e instanceof RequestException) 
             { throw (RequestException) e; }
-
+            
             throw new RuntimeException("Controller mapping error", e);
         }
     }        

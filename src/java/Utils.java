@@ -2,15 +2,12 @@ package utils;
 
 import java.io.PrintWriter;
 import java.lang.reflect.*;
-
 import java.util.*;
-
 import javax.servlet.*;
 import javax.servlet.http.*;
-
 import exceptions.*;
-
 import com.google.gson.Gson;
+import verb.VerbAction;
 
 public class Utils {
 
@@ -37,8 +34,15 @@ public class Utils {
 
         else {
             out.println("<h2>");
-            out.println("Current url: " + currentUrl + " | class name: " + mapping.getClassName() + " | method name: " + mapping.getMethodName());
+            out.println("Current url: " + currentUrl + " | class name: " + mapping.getClassName());
             out.println("</h2>");
+            out.println("<br>");
+            out.println("<h3>Available methods:</h3>");
+
+            for (VerbAction verbAction : mapping.getVerbActions()) {
+                out.println(verbAction.getVerb() + ": " + verbAction.getMethod() + "<br>");
+            }
+            
             out.println("<br>");
         }
     }

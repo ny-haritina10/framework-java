@@ -13,6 +13,8 @@ import com.google.gson.Gson;
 import utils.*;
 import exceptions.*;
 
+import verb.VerbAction;
+
 public class FrontController extends HttpServlet {
 
     private String controllerPackage;
@@ -64,25 +66,35 @@ public class FrontController extends HttpServlet {
 
             String requestedURL = Utils.parseURL(this.projectName, url);
             
-            Mapping mapping = findMappingByUrl(requestedURL);
+            // retrieve the mapping based on the requested url
+            Mapping mapping = this.map.get(requestedURL);
 
             if (mapping == null) 
             { throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL); }
 
-            if (!mapping.getVerb().equals(methodRequest)) 
+            // check if the requested method is allowed for this URL
+            VerbAction matchingVerbAction = null;
+            
+            for (VerbAction verbAction : mapping.getVerbActions()) {
+                if (verbAction.getVerb().equalsIgnoreCase(methodRequest)) {
+                    matchingVerbAction = verbAction;
+                    break;
+                }
+            }
+
+            if (matchingVerbAction == null) 
             { throw new RequestException("405 METHOD NOT ALLOWED: " + methodRequest + " method not allowed for this URL"); }
 
-            String key = methodRequest + ":" + requestedURL;
-            mapping = this.map.get(key);
+            // invoke methods by reflection
+            Object result = Mapping.reflectMethod(mapping, request, methodRequest);
 
-            // Invoke methods by reflection
-            Object result = Mapping.reflectMethod(mapping, request);
+            // check if the method has AnnotationRestAPI
+            Method method = Class.forName(mapping.getClassName()).getDeclaredMethod(matchingVerbAction.getMethod());
 
-            // Check if the method has AnnotationRestAPI
-            Method method = Class.forName(mapping.getClassName()).getDeclaredMethod(mapping.getMethodName());
             if (method.isAnnotationPresent(AnnotationRestAPI.class)) 
             { Utils.handleRestAPI(result, response); } 
             
+            // handle model view 
             else 
             { Utils.handleModelView(result, out, request, response); }
         } 
@@ -91,15 +103,7 @@ public class FrontController extends HttpServlet {
         { handleException(e, response); }
     }
 
-    private Mapping findMappingByUrl(String url) {
-        for (String key : map.keySet()) {
-            if (key.endsWith(":" + url)) {
-                return map.get(key);
-            }
-        }
-        return null;
-    }
-   
+
     private void handleException(Exception e, HttpServletResponse response) throws IOException {
         response.setContentType("application/json");
         PrintWriter out = response.getWriter();
