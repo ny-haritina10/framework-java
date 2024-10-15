@@ -1,5 +1,7 @@
 package verb;
 
+import java.util.Objects; 
+
 public class VerbAction {
     
     private String verb;
@@ -35,4 +37,16 @@ public class VerbAction {
 
         this.method = method;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || obj.getClass() != this.getClass()) return false;
+        VerbAction other = (VerbAction) obj;
+
+        return Objects.equals(verb, other.getVerb()) || Objects.equals(method, other.getMethod());
+    }
+
+    @Override
+    public int hashCode()
+    { return Objects.hash(verb, method); }
 }
