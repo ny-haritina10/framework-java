@@ -63,18 +63,17 @@ public class FrontController extends HttpServlet {
             PrintWriter out = response.getWriter();
             String url = request.getRequestURI();
             String methodRequest = request.getMethod();
-
             String requestedURL = Utils.parseURL(this.projectName, url);
             
-            // retrieve the mapping based on the requested url
+            // retrieve the mapping based on the requested URL
             Mapping mapping = this.map.get(requestedURL);
 
-            if (mapping == null) 
-            { throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL); }
+            if (mapping == null) {
+                throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL);
+            }
 
             // check if the requested method is allowed for this URL
             VerbAction matchingVerbAction = null;
-            
             for (VerbAction verbAction : mapping.getVerbActions()) {
                 if (verbAction.getVerb().equalsIgnoreCase(methodRequest)) {
                     matchingVerbAction = verbAction;
@@ -82,8 +81,19 @@ public class FrontController extends HttpServlet {
                 }
             }
 
-            if (matchingVerbAction == null) 
-            { throw new RequestException("405 METHOD NOT ALLOWED: " + methodRequest + " method not allowed for this URL"); }
+            if (matchingVerbAction == null) {
+                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);  
+                response.setContentType("text/html");  
+
+                PrintWriter errorOut = response.getWriter();
+
+                // output the error message
+                errorOut.println("<h1>500 METHOD NOT ALLOWED</h1?>");
+                errorOut.println("<hr>");
+                errorOut.println("<h4>" + methodRequest + " method is not allowed for the URL: " + requestedURL + "</h4>");
+                errorOut.flush();  
+                return;  
+            }
 
             // invoke methods by reflection
             Object result = Mapping.reflectMethod(mapping, request, methodRequest);
@@ -94,15 +104,13 @@ public class FrontController extends HttpServlet {
             if (method.isAnnotationPresent(AnnotationRestAPI.class)) 
             { Utils.handleRestAPI(result, response); } 
             
-            // handle model view 
             else 
             { Utils.handleModelView(result, out, request, response); }
         } 
-
+        
         catch (Exception e) 
         { handleException(e, response); }
     }
-
 
     private void handleException(Exception e, HttpServletResponse response) throws IOException {
         response.setContentType("application/json");

@@ -11,9 +11,9 @@ import verb.VerbAction;
 public class Mapping {
     
     private String className;
-    private List<VerbAction> verbActions;
+    private Set<VerbAction> verbActions;
 
-    public Mapping(String className, List<VerbAction> verbActions) {
+    public Mapping(String className, Set<VerbAction> verbActions) {
         this.className = className;
         this.verbActions = verbActions;
     }
@@ -154,6 +154,6 @@ public class Mapping {
     public String getClassName() 
     { return className; }
 
-    public List<VerbAction> getVerbActions() 
+    public Set<VerbAction> getVerbActions() 
     { return verbActions; }
 }

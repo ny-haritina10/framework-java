@@ -8,6 +8,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 
 import exceptions.RequestException;
@@ -81,7 +83,7 @@ public class ControllerScanner {
                     if (urlAnnotation != null) {
                         String className = controller.getName();
                         String url = urlAnnotation.value();
-                        List<VerbAction> verbActions = new ArrayList<>();
+                        Set<VerbAction> verbActions = new HashSet<>();
 
                         // handle http verbs by checking annotations
                         if (method.isAnnotationPresent(AnnotationPostMapping.class)) 
