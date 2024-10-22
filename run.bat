@@ -1,5 +1,8 @@
 @echo off
 
+:: create temp file
+if not exist "%temp%" mkdir "%temp%"
+
 :: app name and project path 
 set "app_name=framework-java"
 set "jar_name=framework"
@@ -27,5 +30,6 @@ javac -d "%destinationFolder%" -cp "%lib%\*" *.java
 cd "%destinationFolder%"
 jar -cvfm "%lib_test%\%jar_name%.jar" "%src%\manifest.txt" *
 cd "%src%"
+rmdir /s /q "%root%\temp"
 
 pause

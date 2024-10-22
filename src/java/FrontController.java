@@ -3,6 +3,7 @@ package controller;
 import java.io.*;
 import java.lang.reflect.*;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 import javax.servlet.*;
@@ -49,7 +50,7 @@ public class FrontController extends HttpServlet {
         
         catch (BuildException | RequestException e) {
             System.err.println(e.getMessage());
-            throw new ServletException(e);          // rethrow as ServletException to stop the servlet initialization
+            throw new ServletException(e);
         }
         
         catch (Exception e) 
@@ -109,28 +110,34 @@ public class FrontController extends HttpServlet {
         } 
         
         catch (Exception e) 
-        { handleException(e, response); }
+        {
+            e.printStackTrace(); 
+            handleException(e, response); 
+        }
     }
 
     private void handleException(Exception e, HttpServletResponse response) throws IOException {
-        response.setContentType("application/json");
         PrintWriter out = response.getWriter();
-        Gson gson = new Gson();
-
         HashMap<String, String> errorResponse = new HashMap<>();
         errorResponse.put("error", e.getMessage());
-
-        if (e instanceof RequestException) 
-        { response.setStatus(HttpServletResponse.SC_NOT_FOUND); } 
-        
-        else if (e instanceof NumberFormatException || e instanceof IllegalArgumentException) 
-        { response.setStatus(HttpServletResponse.SC_BAD_REQUEST); } 
-        
-        else 
-        { response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); }
-
-        out.print(gson.toJson(errorResponse));
+    
+        if (e instanceof RequestException) { 
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND); 
+        } 
+        else if (e instanceof NumberFormatException || e instanceof IllegalArgumentException) { 
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); 
+        } 
+        else { 
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); 
+        }
+    
+        out.print("{");
+        for (Map.Entry<String, String> entry : errorResponse.entrySet()) {
+            out.print("\"" + entry.getKey() + "\": \"" + entry.getValue() + "\"");
+        }
+        out.print("}");
     }
+    
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
