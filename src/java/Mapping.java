@@ -8,6 +8,9 @@ import exceptions.*;
 import session.Session;
 import verb.VerbAction;
 
+import upload.FileUpload;
+import javax.servlet.http.Part;
+
 public class Mapping {
     
     private String className;
@@ -82,6 +85,31 @@ public class Mapping {
                     setAllModelAttribute(model, request);
                     args[i] = model;
                 }
+
+                // handle file upload
+                else if (parameter.isAnnotationPresent(AnnotationFileUpload.class)) {
+                    AnnotationFileUpload fileUpload = parameter.getAnnotation(AnnotationFileUpload.class);
+                    boolean isMultiple = fileUpload.multiple();
+                    
+                    if (isMultiple) {
+                        Collection<Part> parts = request.getParts();
+                        List<FileUpload> files = new ArrayList<>();
+                        
+                        for (Part part : parts) {
+                            // Check if it's actually a file
+                            if (part.getContentType() != null) 
+                            { files.add(new FileUpload(part)); }
+                        }
+
+                        args[i] = files;
+                    } 
+                    
+                    else {
+                        Part part = request.getPart(fileUpload.value());
+                        if (part != null && part.getContentType() != null) 
+                        { args[i] = new FileUpload(part); }
+                    }
+                } 
 
                 else 
                 { throw new Exception("ERREUR PARAMETRES NON ANNOTES : ETU002716"); }
