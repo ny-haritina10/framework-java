@@ -12,9 +12,14 @@ import javax.servlet.http.*;
 import com.google.gson.Gson;
 
 import utils.*;
-import exceptions.*;
-
-import verb.VerbAction;
+import exception.*;
+import annotation.*;
+import mapping.*;
+import scanner.*;
+import modelview.*;
+import session.*;
+import verb.*;
+import upload.*;
 
 public class FrontController extends HttpServlet {
 
@@ -66,14 +71,12 @@ public class FrontController extends HttpServlet {
             String methodRequest = request.getMethod();
             String requestedURL = Utils.parseURL(this.projectName, url);
             
-            // retrieve the mapping based on the requested URL
             Mapping mapping = this.map.get(requestedURL);
 
             if (mapping == null) {
                 throw new RequestException("404 NOT FOUND: specified URL not found : " + requestedURL);
             }
 
-            // check if the requested method is allowed for this URL
             VerbAction matchingVerbAction = null;
             for (VerbAction verbAction : mapping.getVerbActions()) {
                 if (verbAction.getVerb().equalsIgnoreCase(methodRequest)) {
@@ -87,11 +90,10 @@ public class FrontController extends HttpServlet {
                 response.setContentType("text/html");  
 
                 PrintWriter errorOut = response.getWriter();
-
-                // output the error message
-                errorOut.println("<h1>500 METHOD NOT ALLOWED</h1?>");
+                errorOut.println("<h1>500 METHOD NOT ALLOWED</h1>");
                 errorOut.println("<hr>");
                 errorOut.println("<h4>" + methodRequest + " method is not allowed for the URL: " + requestedURL + "</h4>");
+
                 errorOut.flush();  
                 return;  
             }
@@ -99,8 +101,22 @@ public class FrontController extends HttpServlet {
             // invoke methods by reflection
             Object result = Mapping.reflectMethod(mapping, request, methodRequest);
 
-            // check if the method has AnnotationRestAPI
-            Method method = Class.forName(mapping.getClassName()).getDeclaredMethod(matchingVerbAction.getMethod());
+            // find the method with its parameters
+            Class<?> controllerClass = Class.forName(mapping.getClassName());
+            Method method = null;
+            
+            // look through all methods to find the matching one
+            for (Method m : controllerClass.getDeclaredMethods()) {
+                if (m.getName().equals(matchingVerbAction.getMethod())) {
+                    method = m;
+                    break;
+                }
+            }
+
+            if (method == null) {
+                throw new NoSuchMethodException("Method " + matchingVerbAction.getMethod() + 
+                    " not found in " + mapping.getClassName());
+            }
 
             if (method.isAnnotationPresent(AnnotationRestAPI.class)) 
             { Utils.handleRestAPI(result, response); } 
@@ -109,33 +125,58 @@ public class FrontController extends HttpServlet {
             { Utils.handleModelView(result, out, request, response); }
         } 
         
-        catch (Exception e) 
-        {
+        catch (Exception e) {
             e.printStackTrace(); 
-            handleException(e, response); 
+            handleException(e, response, request); 
         }
     }
 
-    private void handleException(Exception e, HttpServletResponse response) throws IOException {
+    private void handleException(Exception e, HttpServletResponse response, HttpServletRequest request) 
+        throws IOException 
+    {
         PrintWriter out = response.getWriter();
-        HashMap<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", e.getMessage());
-    
-        if (e instanceof RequestException) { 
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND); 
+        
+        if (e instanceof ValidationException) {
+            ValidationException ve = (ValidationException) e;
+
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType("application/json");
+            
+            // Check if it's an AJAX/API request
+            if (isAjaxRequest(request)) {
+                out.print(ve.toJSON());
+            } 
+            
+            else {
+                // For regular requests, you might want to redirect to a form page
+                // with validation errors in session
+                request.getSession().setAttribute("validationErrors", ve.getFieldErrors());
+                response.sendRedirect(request.getHeader("Referer"));
+            }
         } 
-        else if (e instanceof NumberFormatException || e instanceof IllegalArgumentException) { 
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); 
-        } 
-        else { 
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); 
+
+        else if (e instanceof RequestException) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            out.print(createErrorJSON("Not Found", e.getMessage()));
         }
+
+        else if (e instanceof NumberFormatException || e instanceof IllegalArgumentException) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print(createErrorJSON("Bad Request", e.getMessage()));
+        }
+        
+        else {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print(createErrorJSON("Internal Server Error", e.getMessage()));
+        }
+    }
     
-        out.print("{");
-        for (Map.Entry<String, String> entry : errorResponse.entrySet()) {
-            out.print("\"" + entry.getKey() + "\": \"" + entry.getValue() + "\"");
-        }
-        out.print("}");
+    private boolean isAjaxRequest(HttpServletRequest request) {
+        return "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+    }
+    
+    private String createErrorJSON(String type, String message) {
+        return String.format("{\"error\": \"%s\", \"message\": \"%s\"}", type, message);
     }
     
 

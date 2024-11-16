@@ -1,9 +1,9 @@
-package utils;
+package annotation;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME) 
-public @interface AnnotationController {
-    String name(); 
+public @interface AnnotationGetMapping {
+     
 }
