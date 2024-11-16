@@ -1,4 +1,4 @@
-package utils;
+package scanner;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,10 +11,18 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
-
-import exceptions.RequestException;
-import exceptions.BuildException;
 import verb.VerbAction;
+
+import utils.*;
+import exception.*;
+import annotation.*;
+import mapping.*;
+import scanner.*;
+import modelview.*;
+import session.*;
+import verb.*;
+import upload.*;
+
 
 public class ControllerScanner {
 
@@ -35,13 +43,11 @@ public class ControllerScanner {
             dirs.add(new File(resource.getFile()));
         }
 
-        for (File directory : dirs) {
-            controllers.addAll(findClasses(directory, packageName, classAnnotation));
-        }
+        for (File directory : dirs)  
+        { controllers.addAll(findClasses(directory, packageName, classAnnotation)); }
 
-        if (controllers.isEmpty()) {
-            throw new BuildException("No controller found in the specified package: " + packageName);
-        }
+        if (controllers.isEmpty()) 
+        { throw new BuildException("No controller found in the specified package: " + packageName); }
 
         return controllers;
     }
@@ -50,12 +56,13 @@ public class ControllerScanner {
         throws ClassNotFoundException 
     {
         List<Class<?>> classes = new ArrayList<>();
-        if (!directory.exists()) {
-            return classes;
-        }
+        if (!directory.exists()) 
+        { return classes; }
 
         File[] files = directory.listFiles();
-        assert files != null;
+
+        // using assert keywords to avoid if statement
+        assert files != null : "files are NULL";
 
         for (File file : files) {
             if (file.isDirectory()) 

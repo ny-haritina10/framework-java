@@ -1,35 +1,38 @@
 @echo off
 
-:: create temp file
-if not exist "%temp%" mkdir "%temp%"
+:: Load the configuration file
+for /F "delims=" %%a in (_config.conf) do set "%%a"
 
-:: app name and project path 
-set "app_name=framework-java"
-set "jar_name=framework"
-set "root=D:\Studies\ITU\S4\INF - Framework\framework\%app_name%"
-
-:: set paths
-set "sourceFolder=%root%\src\java"
-set "destinationFolder=%root%\bin"
+:: Build the derived paths after loading root from config
+set "temp=%root%\temp"
+set "src=%root%\src\java"
 set "lib=%root%\lib"
-set "src=%root%"
+set "bin=%root%\bin"
 
-::set lib path from web test
-set "lib_test=D:\Studies\ITU\S4\INF - Framework\test\web\WEB-INF\lib" 
+:: Create temp and bin directories if they don't exist
+if not exist "%temp%" mkdir "%temp%"
+if not exist "%bin%" mkdir "%bin%"
 
-:: copy all java file to a temporary folder
-for /r "%sourceFolder%" %%f in (*.java) do (
-    xcopy "%%f" "%root%\temp"
+:: Copy all java files to temp directory
+for /r "%src%" %%f in (*.java) do (
+    xcopy "%%f" "%temp%"
 )
 
-:: go to temp and compile all java files
-cd "%root%\temp"
-javac -d "%destinationFolder%" -cp "%lib%\*" *.java
+:: Move to temp to compile all java files
+cd "%temp%"
+javac -d "%bin%" -cp "%lib%\*" *.java
 
-:: create jar file 
-cd "%destinationFolder%"
-jar -cvfm "%lib_test%\%jar_name%.jar" "%src%\manifest.txt" *
-cd "%src%"
-rmdir /s /q "%root%\temp"
+:: Move to bin to create jar
+cd "%bin%"
+jar -cvf "%jar_name%.jar" .
 
+:: Copy jar to target directory
+copy "%jar_name%.jar" "%target_dir%"
+copy "%jar_name%.jar" "D:\Studies\ITU\S4\INF - Framework\test\lib"
+
+:: Clean up
+cd "%root%"
+rmdir /s /q "%temp%"
+
+echo Compilation and deployment complete.
 pause

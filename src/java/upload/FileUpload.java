@@ -28,15 +28,16 @@ public class FileUpload {
         String contentDisp = part.getHeader("content-disposition");
         String[] items = contentDisp.split(";");
         for (String s : items) {
-            if (s.trim().startsWith("filename")) {
-                return s.substring(s.indexOf("=") + 2, s.length() - 1);
-            }
+            if (s.trim().startsWith("filename")) 
+            { return s.substring(s.indexOf("=") + 2, s.length() - 1); }
         }
         return "";
     }
 
     // save file
-    public void saveToDirectory(String directory) throws Exception {
+    public void saveToDirectory(String directory) 
+        throws Exception 
+    {
         try 
         { part.write(directory + "/" + fileName); } 
         

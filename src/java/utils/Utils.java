@@ -5,11 +5,35 @@ import java.lang.reflect.*;
 import java.util.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
-import exceptions.*;
 import com.google.gson.Gson;
 import verb.VerbAction;
 
+import utils.*;
+import exception.*;
+import annotation.*;
+import mapping.*;
+import scanner.*;
+import modelview.*;
+import session.*;
+import verb.*;
+import upload.*;
+
 public class Utils {
+
+    public static String inferViewName(String requestURL) {
+        // Remove trailing slashes
+        while (requestURL.endsWith("/")) {
+            requestURL = requestURL.substring(0, requestURL.length() - 1);
+        }
+        
+        // Get the last part of the URL
+        String[] parts = requestURL.split("/");
+        String lastPart = parts[parts.length - 1];
+        
+        // Convert URL format to view format
+        // Example: "insert_client" -> "insert-client.jsp"
+        return lastPart.replace("_", "-") + ".jsp";
+    }
 
     public static String parseURL(String projectName, String url) {
         String prefix = "/" + projectName + "/";
