@@ -90,6 +90,7 @@ public class FrontController extends HttpServlet {
                 response.setContentType("text/html");  
 
                 PrintWriter errorOut = response.getWriter();
+                
                 errorOut.println("<h1>500 METHOD NOT ALLOWED</h1>");
                 errorOut.println("<hr>");
                 errorOut.println("<h4>" + methodRequest + " method is not allowed for the URL: " + requestedURL + "</h4>");
