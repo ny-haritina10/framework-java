@@ -7,20 +7,25 @@ import java.util.HashMap;
 import java.util.Map;
 
 import exception.ValidationException;
+
 import validation.Size;
 import validation.Valid;
-import validator.SizeValidator;
+import validation.NotNull;
 
+import validator.SizeValidator;
+import validator.NotNullValidator;
+
+
+@SuppressWarnings("unchecked")
 public class ValidationEngine {
+    @SuppressWarnings("rawtypes")
     private static Map<Class<? extends Annotation>, Class<? extends ConstraintValidator>> validators = new HashMap<>();
     
     static {
         // Register default validators
+        // TODO: implement all validators
         validators.put(Size.class, SizeValidator.class);
-
-        // TODO: Need Implementation
-        // validators.put(NotNull.class, NotNullValidator.class);
-        // validators.put(Pattern.class, PatternValidator.class);
+        validators.put(NotNull.class, NotNullValidator.class);
     }
     
     public static ValidationResult validate(Object object) 
@@ -37,6 +42,7 @@ public class ValidationEngine {
         return context.getResult();
     }
     
+    @SuppressWarnings("rawtypes")
     private static void validateField(Field field, Object object, ValidationContext context) 
         throws ValidationException 
     {
@@ -48,7 +54,7 @@ public class ValidationEngine {
                 try {
                     ConstraintValidator validator = validatorClass.getDeclaredConstructor().newInstance();
                     validator.initialize(annotation);
-                    
+
                     Object value = field.get(object);
                     if (!validator.isValid(value, context)) {
                         String message = getValidationMessage(annotation);
@@ -57,9 +63,8 @@ public class ValidationEngine {
                     }
                 } 
                 
-                catch (Exception e) {
-                    throw new ValidationException("Error validating field: " + field.getName());
-                }
+                catch (Exception e) 
+                { throw new ValidationException("Error validating field: " + field.getName()); }
             }
         }
     }
