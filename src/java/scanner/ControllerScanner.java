@@ -132,6 +132,7 @@ public class ControllerScanner {
         
         catch (Exception e) {
             e.printStackTrace();
+            
             if (e instanceof RequestException) 
             { throw (RequestException) e; }
             

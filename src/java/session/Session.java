@@ -12,6 +12,16 @@ public class Session {
         this.session = request.getSession();
     }
 
+    public void login(Class<?> clazz) {
+        this.add("authenticated", true);
+        this.add("profile", clazz);
+    }
+
+    public void logout() {
+        this.remove("authenticated");
+        this.remove("profile");
+    }
+
     public void add(String key, Object value) 
     { this.session.setAttribute(key, value); }
 
