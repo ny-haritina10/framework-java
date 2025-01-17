@@ -3,7 +3,6 @@ package mapping;
 import java.lang.reflect.*;
 import java.util.*;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 
 import session.FormSession;
 import session.Session;
@@ -12,7 +11,6 @@ import verb.VerbAction;
 import upload.FileUpload;
 import javax.servlet.http.Part;
 
-import utils.*;
 import validation.Valid;
 import exception.*;
 import annotation.*;
@@ -67,18 +65,18 @@ public class Mapping {
                 }
             }
 
-            if (method == null) {
-                throw new NoSuchMethodException("No method found for the verb: " + verb);
-            }
+            if (method == null)
+            { throw new NoSuchMethodException("No method found for the verb: " + verb); }
 
 
             if (verb.equalsIgnoreCase("GET") && method != null && method.isAnnotationPresent(AnnotationGetMapping.class)) 
             { session.storeFormMethod(method, controllerInstance); }
 
             // check method annotation 
-            if (!isMethodAccessAllowed(method, sess)) {
+            if (!isAccessAllowed(method, sess)) {
                 ModelView mv = new ModelView("not-authenticated.jsp");
                 mv.add("message", "User not authenticated");
+
                 return mv;
             }
 
@@ -205,39 +203,53 @@ public class Mapping {
         }
     }
 
-    private static boolean isMethodAccessAllowed(Method method, Session sess) {
-        if (!method.isAnnotationPresent(Auth.class)) 
-        { return true; }
+    private static boolean isAccessAllowed(Method method, Session sess) {
+        Class<?> controllerClass = method.getDeclaringClass();
         
-        // hard coded redirection for now
-        ModelView mv = new ModelView("not-authenticated.jsp");
-        mv.add("message", "User not authenticated");
+        // controller-level auth
+        if (controllerClass.isAnnotationPresent(AuthController.class)) {
+            if (!isAuthenticated(sess)) 
+            { return false; }
 
-        Auth annotation = method.getAnnotation(Auth.class);
-    
-        // Check for no specified roles (any authenticated user can access)
-        if (annotation.roles().length == 1 && annotation.roles()[0].equals(Void.class)) {
-            if (sess.get("authenticated") == null) 
-            { return false; }
-            
-            if (
-                sess.get("authenticated") != null && 
-                ((boolean) sess.get("authenticated")) == false
-            ) 
-            { return false; }
-            
-            return true;
+            AuthController controllerAuth = controllerClass.getAnnotation(AuthController.class);
+            if (controllerAuth.roles().length > 0 && !controllerAuth.roles()[0].equals(Void.class)) {
+                if (!hasRequiredRole(sess, controllerAuth.roles())) 
+                { return false; }
+            }
         }
-    
-        Class<?>[] roles = annotation.roles();
+
+        // method-level auth
+        if (method.isAnnotationPresent(Auth.class)) {
+            if (!isAuthenticated(sess)) 
+            { return false; }
+
+            Auth methodAuth = method.getAnnotation(Auth.class);
+            if (methodAuth.roles().length > 0 && !methodAuth.roles()[0].equals(Void.class)) {
+                if (!hasRequiredRole(sess, methodAuth.roles())) 
+                { return false; }
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean isAuthenticated(Session sess) {
+        if (sess.get("authenticated") == null) {
+            return false;
+        }
+        return (boolean) sess.get("authenticated");
+    }
+
+    private static boolean hasRequiredRole(Session sess, Class<?>[] allowedRoles) {
         Class<?> sessionRole = (Class<?>) sess.get("profile");
-    
-        // Check session role matches any of the allowed roles
-        for (Class<?> role : roles) {
+        if (sessionRole == null) 
+        { return false; }
+
+        for (Class<?> role : allowedRoles) {
             if (role.equals(sessionRole)) 
             { return true; }
         }
-    
+
         return false;
     }
 
