@@ -22,12 +22,25 @@ public class ModelView {
     {
         try {
             String viewURL = modelView.getViewURL();
+
+            // Ensure the URL starts with a slash
+            if (!viewURL.startsWith("/")) {
+                viewURL = "/" + viewURL;
+            }
+
+            System.out.println("view URL after correction: " + viewURL);
+            
             HashMap<String, Object> data = modelView.getData();
 
             for (HashMap.Entry<String, Object> entry : data.entrySet()) 
             { request.setAttribute(entry.getKey(), entry.getValue()); }
 
-            RequestDispatcher dispatcher = request.getRequestDispatcher(viewURL);
+            RequestDispatcher dispatcher = request.getServletContext().getRequestDispatcher(viewURL);
+            
+
+            System.out.println("context path: " + request.getContextPath());
+            System.out.println("servlet path: " + request.getServletPath());
+
             dispatcher.forward(request, response);    
         } 
         

@@ -1,25 +1,28 @@
 package controller;
 
-import java.io.*;
-import java.lang.reflect.*;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.Gson;
-
-import utils.*;
-import exception.*;
-import annotation.*;
-import mapping.*;
-import scanner.*;
-import modelview.*;
-import session.*;
-import verb.*;
-import upload.*;
+import annotation.AnnotationController;
+import annotation.AnnotationRestAPI;
+import exception.BuildException;
+import exception.RequestException;
+import exception.ValidationException;
+import mapping.Mapping;
+import response.FileExportResult;
+import scanner.ControllerScanner;
+import utils.Utils;
+import verb.VerbAction;
 
 public class FrontController extends HttpServlet {
 
@@ -68,7 +71,8 @@ public class FrontController extends HttpServlet {
         throws ServletException, IOException 
     {
         try {
-            PrintWriter out = response.getWriter();
+            // PrintWriter out = response.getWriter();
+
             String url = request.getRequestURI();
             String methodRequest = request.getMethod();
             String requestedURL = Utils.parseURL(this.projectName, url);
@@ -121,11 +125,18 @@ public class FrontController extends HttpServlet {
                     " not found in " + mapping.getClassName());
             }
 
-            if (method.isAnnotationPresent(AnnotationRestAPI.class)) 
-            { Utils.handleRestAPI(result, response); } 
+            // result handling logic 
+            if (result instanceof FileExportResult) 
+            { Utils.handleFileExport((FileExportResult) result, response); }
+
+            else if (method.isAnnotationPresent(AnnotationRestAPI.class))
+            { Utils.handleRestAPI(result, response); }
             
-            else 
-            { Utils.handleModelView(result, out, request, response); }
+            else
+            {
+                PrintWriter out = response.getWriter();
+                Utils.handleModelView(result, out, request, response);
+            }
         } 
         
         catch (Exception e) {
@@ -181,7 +192,6 @@ public class FrontController extends HttpServlet {
         return String.format("{\"error\": \"%s\", \"message\": \"%s\"}", type, message);
     }
     
-
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
         throws IOException, ServletException 
