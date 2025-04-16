@@ -9,19 +9,19 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.List;
-import verb.VerbAction;
+import java.util.Set;
 
-import utils.*;
-import exception.*;
-import annotation.*;
-import mapping.*;
-import scanner.*;
-import modelview.*;
-import session.*;
-import verb.*;
-import upload.*;
+import annotation.AnnotationGetMapping;
+import annotation.AnnotationPostMapping;
+import annotation.AnnotationRestAPI;
+import annotation.AnnotationURL;
+import exception.BuildException;
+import exception.RequestException;
+import mapping.Mapping;
+import modelview.ModelView;
+import response.FileExportResult;
+import verb.VerbAction;
 
 
 public class ControllerScanner {
@@ -104,14 +104,17 @@ public class ControllerScanner {
                         { verbActions.add(new VerbAction("GET", method.getName())); }
 
                         Class<?> returnType = method.getReturnType();
-                        if (
-                            !(returnType.equals(String.class) || 
-                            returnType.equals(ModelView.class)) && 
-                            !method.isAnnotationPresent(AnnotationRestAPI.class)) 
+                        boolean isRestApi = method.isAnnotationPresent(AnnotationRestAPI.class);
+                        boolean isValidReturnType =
+                            returnType.equals(String.class) ||
+                            returnType.equals(ModelView.class) ||
+                            returnType.equals(FileExportResult.class); 
+
+                        if (!isRestApi && !isValidReturnType)
                         {
                             throw new RequestException(
-                                "The method " + method.getName() + " in " + className + 
-                                " has returned an invalid type. Returned type: " + returnType.getName());
+                                "The method " + method.getName() + " in " + className +
+                                " has an invalid return type for a non-REST API method. Allowed types: String, ModelView, FileExportResult. Returned type: " + returnType.getName());
                         }
 
                         // check if a Mapping already exists for this url
